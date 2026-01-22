@@ -93,7 +93,7 @@ struct __attribute__( ( visibility( "hidden" ) ) ) BlobRegistryImpl {
 };
 
 #define BLOB_COUNT( TYPE, NAME, PATH ) +1
-using BlobRegistry = BlobRegistryImpl<0 + BLOB_RESOURCE_MANIFEST( BLOB_COUNT )>;
+using BlobRegistry = BlobRegistryImpl<0 BLOB_RESOURCE_MANIFEST( BLOB_COUNT )>;
 #undef BLOB_COUNT
 
 

@@ -15,7 +15,7 @@ project(inc_bin
 
 add_library(inc_bin SHARED)
 target_sources(inc_bin PRIVATE
-    source/Resources.S
+    source/blob.S
 )
 target_include_directories(inc_bin PUBLIC
     .

@@ -1,5 +1,5 @@
 #include <cstdio>
-#include "Resources.h"
+#include "blob_registry.h"
 
 int main( void ) {
     auto &entries = blob_resource::BlobRegistry::get_entries();
