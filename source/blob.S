@@ -46,7 +46,7 @@ NAME:                                  ; \
     .quad 0                             ;   \
     .size NAME, . - NAME               ;
 
-#define GENERATE_ASM_ENTRY(TYPE, NAME, PATH) \
+#define GENERATE_ASM_ENTRY(TYPE, NAME, ID, PATH) \
     ASM_EXPORT_BLOB(_blob_##NAME##_metadata, PATH)
 
 BLOB_RESOURCE_MANIFEST(GENERATE_ASM_ENTRY)

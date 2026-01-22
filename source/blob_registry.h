@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #if defined( __cplusplus )
 
 #include <stdint.h>
@@ -26,7 +27,7 @@ enum class BlobType
 
 namespace _BlobInternal {
 extern "C" {
-#define DECLARE_SYMBOLS( TYPE, NAME, PATH ) extern const BinaryBlob _blob_##NAME##_metadata;
+#define DECLARE_SYMBOLS( TYPE, NAME, ID, PATH ) extern const BinaryBlob _blob_##NAME##_metadata;
 BLOB_RESOURCE_MANIFEST( DECLARE_SYMBOLS )
 #undef DECLARE_SYMBOLS
 }
@@ -35,7 +36,7 @@ BLOB_RESOURCE_MANIFEST( DECLARE_SYMBOLS )
 /* 使用连续自增ID */
 enum class BlobID
 {
-#define GEN_ENUM( TYPE, NAME, PATH ) NAME,
+#define GEN_ENUM( TYPE, NAME, ID, PATH ) NAME,
     BLOB_RESOURCE_MANIFEST( GEN_ENUM )
 #undef GEN_ENUM
 };
@@ -65,34 +66,44 @@ struct BlobEntry {
  * blob_manifest.h 头文件导致blob数量不一致进而导致abi不一致 */
 template <size_t N>
 struct __attribute__( ( visibility( "hidden" ) ) ) BlobRegistryImpl {
-    using Entries = std::array<BlobEntry, N>;
-    static inline const Entries &get_entries() {
-        static const Entries entries = {
-#define GEN_ENTRY( TYPE, NAME, PATH )                      \
-    BlobEntry{                                             \
-        BlobID::NAME,                                      \
-        BlobType::TYPE,                                    \
-        #NAME,                                             \
-        PATH,                                              \
-        ( _BlobInternal::_blob_##NAME##_metadata ).data,   \
-        ( _BlobInternal::_blob_##NAME##_metadata ).length, \
-    },
-            BLOB_RESOURCE_MANIFEST( GEN_ENTRY )
-#undef GEN_ENTRY
-        };
-        return entries;
+#define GEN_STATIC_VAR( TYPE, NAME, UID, PATH )                                            \
+    __attribute__( ( always_inline ) ) inline static const BlobEntry &get_entry_##NAME() { \
+        static const BlobEntry inner_entry_##NAME = {                                      \
+            BlobID::NAME,                                                                  \
+            BlobType::TYPE,                                                                \
+            #NAME,                                                                         \
+            PATH,                                                                          \
+            ( _BlobInternal::_blob_##NAME##_metadata ).data,                               \
+            ( _BlobInternal::_blob_##NAME##_metadata ).length,                             \
+        };                                                                                 \
+        return inner_entry_##NAME;                                                         \
     }
-    static inline const BlobEntry &get_blob( BlobID id ) { return get_entries().at( static_cast<size_t>( id ) ); }
-    static inline const BlobEntry *get_blob( uint32_t id ) {
-        const Entries &entries = get_entries();
-        if ( id < entries.size() ) {
-            return &get_entries()[id];
+    BLOB_RESOURCE_MANIFEST( GEN_STATIC_VAR )
+#undef GEN_STATIC_VAR
+
+    static const BlobEntry *get_blob( BlobID uid ) {
+        switch ( uid ) {
+#define GEN_CASE( TYPE, NAME, UID, PATH ) \
+    case BlobID::NAME:                    \
+        return &get_entry_##NAME();
+            BLOB_RESOURCE_MANIFEST( GEN_CASE )
+#undef GEN_CASE
         }
         return nullptr;
     }
+
+    using Entries = std::array<std::reference_wrapper<const BlobEntry>, N>;
+    static inline const Entries &get_entries() {
+        static const Entries entries = {
+#define GEN_XXX( TYPE, NAME, UID, PATH ) std::ref( get_entry_##NAME() ),
+            BLOB_RESOURCE_MANIFEST( GEN_XXX )
+#undef GEN_XXX
+        };
+        return entries;
+    }
 };
 
-#define BLOB_COUNT( TYPE, NAME, PATH ) +1
+#define BLOB_COUNT( TYPE, NAME, ID, PATH ) +1
 using BlobRegistry = BlobRegistryImpl<0 BLOB_RESOURCE_MANIFEST( BLOB_COUNT )>;
 #undef BLOB_COUNT
 
